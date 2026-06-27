@@ -3,7 +3,7 @@
 A real-time cybersecurity monitoring platform built for Security Operations Centers (SOC).
 
 ## 🚀 Live Demo
-[View Live Dashboard](https://4jjc.sisko.replit.dev)
+[View Live Dashboard](https://network-sentinel-dashboard--raghavshikriwal.replit.app)
 
 ## 📋 Features
 - 🔐 JWT Authentication System
