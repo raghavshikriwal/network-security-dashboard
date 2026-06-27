@@ -10,10 +10,11 @@ import { useSocket } from "../hooks/useSocket";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { format } from "date-fns";
-import { ShieldAlert, AlertTriangle, Info, Activity, Clock, ShieldX, ServerCrash } from "lucide-react";
+import { ShieldAlert, AlertTriangle, Info, Activity, Clock, ShieldX, ServerCrash, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TrafficPoint } from "@workspace/api-client-react";
+import ThreatMap from "@/components/ThreatMap";
 
 const SEVERITY_COLORS = {
   critical: "hsl(var(--destructive))",
@@ -22,14 +23,23 @@ const SEVERITY_COLORS = {
   low: "hsl(var(--info))",
 };
 
+interface MapThreat {
+  id: number | string;
+  sourceIp?: string;
+  severity?: string;
+  title?: string;
+}
+
 export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   const { data: initialTraffic, isLoading: trafficLoading } = useGetTrafficHistory({ minutes: 30 });
   const { data: severityData, isLoading: severityLoading } = useGetThreatsBySeverity();
   const { data: recentActivity, isLoading: activityLoading } = useGetRecentActivity({ limit: 10 });
   const { data: latestThreats, isLoading: threatsLoading } = useGetThreats({ limit: 5, status: 'active' });
+  const { data: allThreats } = useGetThreats({ limit: 50 });
 
   const [trafficData, setTrafficData] = useState<TrafficPoint[]>([]);
+  const [mapThreats, setMapThreats] = useState<MapThreat[]>([]);
   const { socket } = useSocket();
 
   useEffect(() => {
@@ -37,6 +47,17 @@ export default function Dashboard() {
       setTrafficData(initialTraffic);
     }
   }, [initialTraffic]);
+
+  useEffect(() => {
+    if (allThreats) {
+      setMapThreats(allThreats.map(t => ({
+        id: t.id,
+        sourceIp: t.sourceIp,
+        severity: t.severity,
+        title: t.title,
+      })));
+    }
+  }, [allThreats]);
 
   useEffect(() => {
     if (!socket) return;
@@ -49,8 +70,16 @@ export default function Dashboard() {
       });
     });
 
+    socket.on("new_threat", (threat: MapThreat) => {
+      setMapThreats(prev => {
+        const next = [{ ...threat, id: `live-${Date.now()}` }, ...prev];
+        return next.slice(0, 50);
+      });
+    });
+
     return () => {
       socket.off("traffic_update");
+      socket.off("new_threat");
     };
   }, [socket]);
 
@@ -65,6 +94,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         <StatCard 
           title="ACTIVE_THREATS" 
@@ -104,6 +134,24 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* Live World Threat Map */}
+      <Card className="bg-card rounded-none border-border overflow-hidden">
+        <CardHeader className="border-b border-border bg-muted/30 pb-4">
+          <CardTitle className="text-sm font-mono flex items-center gap-2">
+            <Globe className="w-4 h-4 text-primary" />
+            GLOBAL_THREAT_MAP
+            <span className="ml-auto flex items-center gap-1.5 text-[10px] text-cyan-400/70">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block" />
+              LIVE · {mapThreats.length}_SOURCES_TRACKED
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 h-[320px]">
+          <ThreatMap liveThreats={mapThreats} />
+        </CardContent>
+      </Card>
+
+      {/* Traffic + Severity Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="col-span-2 bg-card rounded-none border-border">
           <CardHeader className="border-b border-border bg-muted/30 pb-4">
@@ -194,6 +242,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Threats + Activity Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="bg-card rounded-none border-border overflow-hidden">
           <CardHeader className="border-b border-border bg-muted/30 pb-4">

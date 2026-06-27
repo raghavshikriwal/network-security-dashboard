@@ -75,6 +75,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "react-simple-maps": "^3.0.0",
     "socket.io-client": "^4.8.3"
   }
 }
