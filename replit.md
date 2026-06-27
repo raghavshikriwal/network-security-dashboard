@@ -1,36 +1,52 @@
-# [Project name]
+# Network Security Dashboard
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A real-time Security Operations Center (SOC) dashboard for monitoring network threats, traffic, and incidents with JWT authentication.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
+- `pnpm --filter @workspace/security-dashboard run dev` — run the frontend (port 18344)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `DATABASE_URL` — Postgres connection string, `SESSION_SECRET` — JWT signing key
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
+- API: Express 5 + Socket.io (real-time traffic events)
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
+- Auth: JWT via `jsonwebtoken`
 - API codegen: Orval (from OpenAPI spec)
+- Frontend: React + Vite + Recharts + Tailwind CSS (dark theme)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — API contract (source of truth)
+- `lib/db/src/schema/` — DB schema (users, threats, incidents)
+- `artifacts/api-server/src/routes/` — Express route handlers
+- `artifacts/api-server/src/middlewares/auth.ts` — JWT middleware
+- `artifacts/api-server/src/lib/trafficStore.ts` — In-memory real-time traffic data store
+- `artifacts/security-dashboard/src/` — React frontend
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Socket.io serves at `/api/socket.io` path — both `/api` and `/api/socket.io` are listed in artifact.toml paths for proxy routing.
+- JWT auth uses `SESSION_SECRET` env var, falls back to a hardcoded default for dev.
+- Traffic data is entirely in-memory (no DB); simulated with realistic random values every 5s.
+- IP lookup is deterministic/simulated (no external API dependency).
+- Passwords are SHA-256 hashed with a fixed salt (not bcrypt) — fine for a demo, upgrade for production.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Login**: JWT auth with demo credentials (admin/admin123, analyst/analyst123)
+- **Dashboard**: Live traffic charts (Socket.io), stat cards, severity donut chart, activity feed
+- **Threat Alerts**: Filterable list of threats with resolve/investigate actions
+- **Incident Logs**: Create, track, and update security incidents
+- **IP Lookup**: Geo info, risk score, VPN/Tor/proxy detection for any IP
 
 ## User preferences
 
@@ -38,7 +54,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Always add new WebSocket paths to the api-server `artifact.toml` paths array — the proxy only forwards explicitly listed paths.
+- After OpenAPI spec changes, always re-run `pnpm --filter @workspace/api-spec run codegen` before building.
+- The `lib/db` package exports all schema tables — import from `@workspace/db` in routes.
 
 ## Pointers
 

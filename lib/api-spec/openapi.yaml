@@ -1,22 +1,32 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Network Security Dashboard API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: traffic
+    description: Network traffic
+  - name: threats
+    description: Threat management
+  - name: incidents
+    description: Incident logs
+  - name: iplookup
+    description: IP lookup
+  - name: stats
+    description: Dashboard stats
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +34,335 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login and get JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthToken"
+        "401":
+          description: Invalid credentials
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user info
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /threats:
+    get:
+      operationId: getThreats
+      tags: [threats]
+      summary: List all threats
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, resolved, all]
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [critical, high, medium, low]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of threats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Threat"
+    post:
+      operationId: createThreat
+      tags: [threats]
+      summary: Create a new threat alert
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ThreatInput"
+      responses:
+        "201":
+          description: Threat created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Threat"
+
+  /threats/{id}:
+    get:
+      operationId: getThreat
+      tags: [threats]
+      summary: Get a specific threat
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Threat details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Threat"
+    patch:
+      operationId: updateThreat
+      tags: [threats]
+      summary: Update threat status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ThreatUpdate"
+      responses:
+        "200":
+          description: Updated threat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Threat"
+
+  /incidents:
+    get:
+      operationId: getIncidents
+      tags: [incidents]
+      summary: List all incidents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of incidents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Incident"
+    post:
+      operationId: createIncident
+      tags: [incidents]
+      summary: Log a new incident
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IncidentInput"
+      responses:
+        "201":
+          description: Incident created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+
+  /incidents/{id}:
+    get:
+      operationId: getIncident
+      tags: [incidents]
+      summary: Get specific incident
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Incident details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+    patch:
+      operationId: updateIncident
+      tags: [incidents]
+      summary: Update incident
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IncidentUpdate"
+      responses:
+        "200":
+          description: Updated incident
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Incident"
+
+  /iplookup:
+    get:
+      operationId: lookupIp
+      tags: [iplookup]
+      summary: Look up IP address information
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ip
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: IP information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IpInfo"
+
+  /stats/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [stats]
+      summary: Get dashboard summary statistics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /stats/traffic:
+    get:
+      operationId: getTrafficHistory
+      tags: [stats]
+      summary: Get historical traffic data
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: minutes
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Traffic data points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrafficPoint"
+
+  /stats/threats-by-severity:
+    get:
+      operationId: getThreatsBySeverity
+      tags: [stats]
+      summary: Get threat counts grouped by severity
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Threat severity breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SeverityCount"
+
+  /stats/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [stats]
+      summary: Get recent security activity feed
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recent activity items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +372,254 @@ components:
       required:
         - status
 
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    AuthToken:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      required: [id, username, role]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          type: string
+        email:
+          type: ["string", "null"]
+        lastLogin:
+          type: ["string", "null"]
+
+    Threat:
+      type: object
+      required: [id, title, severity, status, sourceIp, type, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        status:
+          type: string
+          enum: [active, resolved, investigating]
+        sourceIp:
+          type: string
+        destinationIp:
+          type: ["string", "null"]
+        type:
+          type: string
+        port:
+          type: ["integer", "null"]
+        protocol:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        resolvedAt:
+          type: ["string", "null"]
+
+    ThreatInput:
+      type: object
+      required: [title, severity, sourceIp, type]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        sourceIp:
+          type: string
+        destinationIp:
+          type: string
+        type:
+          type: string
+        port:
+          type: integer
+        protocol:
+          type: string
+
+    ThreatUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, resolved, investigating]
+        description:
+          type: string
+
+    Incident:
+      type: object
+      required: [id, title, severity, status, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        status:
+          type: string
+          enum: [open, in_progress, closed]
+        affectedSystems:
+          type: ["string", "null"]
+        assignedTo:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    IncidentInput:
+      type: object
+      required: [title, severity]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [critical, high, medium, low]
+        affectedSystems:
+          type: string
+        assignedTo:
+          type: string
+
+    IncidentUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, in_progress, closed]
+        description:
+          type: string
+        assignedTo:
+          type: string
+
+    IpInfo:
+      type: object
+      required: [ip]
+      properties:
+        ip:
+          type: string
+        country:
+          type: ["string", "null"]
+        countryCode:
+          type: ["string", "null"]
+        region:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        isp:
+          type: ["string", "null"]
+        org:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        timezone:
+          type: ["string", "null"]
+        isVpn:
+          type: boolean
+        isTor:
+          type: boolean
+        isProxy:
+          type: boolean
+        riskScore:
+          type: integer
+        threatHistory:
+          type: integer
+
+    DashboardStats:
+      type: object
+      required: [totalThreats, activeThreats, resolvedThreats, openIncidents, bytesIn, bytesOut, packetsPerSecond, blockedConnections]
+      properties:
+        totalThreats:
+          type: integer
+        activeThreats:
+          type: integer
+        resolvedThreats:
+          type: integer
+        criticalThreats:
+          type: integer
+        openIncidents:
+          type: integer
+        closedIncidents:
+          type: integer
+        bytesIn:
+          type: integer
+        bytesOut:
+          type: integer
+        packetsPerSecond:
+          type: integer
+        blockedConnections:
+          type: integer
+        uptimeHours:
+          type: integer
+
+    TrafficPoint:
+      type: object
+      required: [timestamp, bytesIn, bytesOut, packetsIn, packetsOut, threats]
+      properties:
+        timestamp:
+          type: string
+        bytesIn:
+          type: integer
+        bytesOut:
+          type: integer
+        packetsIn:
+          type: integer
+        packetsOut:
+          type: integer
+        threats:
+          type: integer
+
+    SeverityCount:
+      type: object
+      required: [severity, count]
+      properties:
+        severity:
+          type: string
+        count:
+          type: integer
+
+    ActivityItem:
+      type: object
+      required: [id, type, message, timestamp, severity]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+        severity:
+          type: string
+        sourceIp:
+          type: ["string", "null"]
