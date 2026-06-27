@@ -21,10 +21,6 @@ A real-time cybersecurity monitoring platform built for Security Operations Cent
 - **Database:** PostgreSQL
 - **Auth:** JWT
 
-## 🔑 Demo Login
-- Username: admin
-- Password: admin123
-
 ## 👨‍💻 Developer
 Raghav Shikriwal
 Information Technology - Network Security
